@@ -100,6 +100,7 @@ func main() {
 
 	// set http handler on root request uri
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("request from %s for %s", r.RemoteAddr, r.RequestURI)
 		// get code from RequestURI
 		code := r.RequestURI[1:]
 		if len(code) == 0 {
