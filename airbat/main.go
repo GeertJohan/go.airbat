@@ -100,7 +100,7 @@ func main() {
 
 	// set http handler on root request uri
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("request from %s for %s\n", r.RemoteAddr, r.RequestURI)
+		log.Printf("request from %s (%s) for %s\n", r.RemoteAddr, r.Header.Get("X-Real-IP"), r.RequestURI)
 		// get code from RequestURI
 		code := r.RequestURI[1:]
 		if len(code) == 0 {
