@@ -19,11 +19,11 @@ func toAirbat(id uint64) (string, error) {
 	}
 
 	// put unsigned varint into []byte buffer
-	buf := make([]byte, 0, 8)
-	_ = binary.PutUvarint(buf, id)
+	buf := make([]byte, 10)
+	n := binary.PutUvarint(buf, id)
 
 	// encode with base64 URL encoding
-	code := base64.URLEncoding.EncodeToString(buf)
+	code := base64.URLEncoding.EncodeToString(buf[:n])
 
 	// all done
 	return code, nil
