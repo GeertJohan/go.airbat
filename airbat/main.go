@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/GeertJohan/go.airbat"
+	"github.com/GeertJohan/go.airbrake"
 	"github.com/jessevdk/go-flags"
 	"html/template"
 	"log"
@@ -74,7 +75,10 @@ type dataRedirect struct {
 }
 
 var options struct {
-	HTTPPort string `long:"port" default:"8321"`
+	HTTPPort    string `long:"port" default:"8321"`
+	AirID       string `long:"airid"`
+	AirKey      string `long:"airkey"`
+	Environment string `long:"environment"`
 }
 
 func main() {
@@ -84,6 +88,15 @@ func main() {
 		fmt.Printf("error parsing flags: %s\n", err)
 		os.Exit(1)
 	}
+
+	if options.AirID == "" || options.AirKey == "" || options.Environment == "" {
+		fmt.Println("require both --airid and --airkey and --environment flags")
+		os.Exit(1)
+	}
+
+	brake := airbrake.NewBrake(options.AirID, options.AirKey, options.Environment, &airbrake.Config{
+		URLService: airbrake.URLService_Airbat,
+	})
 
 	// set http handler on root request uri
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -97,8 +110,8 @@ func main() {
 		// convert code to notice id
 		id, err := airbat.AirbatCodeToUint(code)
 		if err != nil {
-			//++ TODO: use airbrake
-			log.Printf("could not convert to uint: %s\n", err)
+			//++ TODO: should this be reported to airbrake? This can be just a wrong url (user-edit gone wrong)
+			brake.Errorf("conversion error", "could not convert to uint: %s", err)
 
 			// write error template
 			data := dataError{
@@ -107,8 +120,7 @@ func main() {
 			w.WriteHeader(http.StatusBadRequest)
 			err = tmplError.Execute(w, data)
 			if err != nil {
-				//++ TODO: use airbrake
-				log.Printf("error executing error template: %s\n", err)
+				brake.Errorf("template error", "error executing error template: %s", err)
 				return
 			}
 			return
@@ -132,8 +144,7 @@ func main() {
 			// execute template
 			err = tmplRedirect.Execute(w, data)
 			if err != nil {
-				//++ TODO: use airbrake
-				log.Printf("error writing redirect template: %s\n", err)
+				brake.Errorf("template error", "error executing redirect template: %s", err)
 			}
 		}
 	})
@@ -142,7 +153,6 @@ func main() {
 	go func() {
 		err := http.ListenAndServe(":"+options.HTTPPort, nil)
 		if err != nil {
-			//++ TODO: use airbrake
 			log.Printf("error listening on port %s: %s\n", options.HTTPPort, err)
 			os.Exit(1)
 		}
